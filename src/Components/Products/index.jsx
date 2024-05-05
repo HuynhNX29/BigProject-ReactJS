@@ -1,17 +1,30 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import React from 'react';
-import { addToCart, getAllProducts, getProductsByCategory } from "../../API";
+import { AddToCart, getAllProducts, getProductsByCategory } from "../../API";
 import { Badge, Button, Card, Image, List, message, Rate, Typography, Spin } from "antd";
-import { Select } from 'antd';
+import { Select, Input } from 'antd';
 import Column from "antd/es/table/Column";
 import { useParams } from 'react-router-dom';
+import StoreContext from "../../Context/context";
 
+
+const { Search } = Input;
 
 const Products = () => {
 
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState([]);
     const [sortOrder, setSortOrder] = useState('az');
+    const [searchKey, setSearchKey] = useState('');
+
+    // const perItems = []
+
+    const [permanentItemsList, setPermanentItemsList] = useState([]);
+    // const [cart, setCart] = useState([]);
+
+    const context = useContext(StoreContext);
+
+    // console.log(context);
 
     const param = useParams();
 
@@ -21,11 +34,35 @@ const Products = () => {
             ? getProductsByCategory(param.categoryId)
             : getAllProducts()
         ).then((res) => {
-            setItems(res.products);
+
+            const addToItems = []
+            res.products.forEach(item => {
+                addToItems.push({ ...item, quantity: 1, total: 0 });
+            });
+
+            setItems(addToItems);
+            setPermanentItemsList(addToItems);
             setLoading(false);
         })
     }, [param]);
 
+
+
+
+    useEffect(() => {
+
+        // console.log(searchKey);
+        // console.log(permanentItemsList);
+
+        if (!searchKey) {
+            setItems(permanentItemsList);
+        }
+        else {
+            // console.log("Have a searchkey");
+            handleSearch();
+        }
+
+    }, [searchKey]);
 
 
     if (loading) {
@@ -68,85 +105,147 @@ const Products = () => {
         return sortedItems;
     }
 
+    // const addToCart = (item) => {
+    //     // console.log(item);
+
+    //     const items = [...context.store.cart];
+
+    //     const index = items.findIndex(element => element.id === item.id);
+    //     // console.log(`index: ${index}`);
+    //     if (index !== -1) {
+
+    //         // message.success(`${item.title} has been added to cart`);
+
+    //         const newItem = items[index];
+    //         newItem.quantity = newItem.quantity ? newItem.quantity + 1 : 1;
+
+    //     }
+
+    //     else {
+    //         items.push(item);
+    //     }
+
+    //     context.setStore({
+    //         cart: items,
+    //     });
+
+    // }
+
+    const handleSearch = () => {
+        // console.log(searchKey);
+        // console.log(getSortedItems());
+
+        const items = permanentItemsList.filter((element) => (element.title).toLowerCase().includes(searchKey))
+        // console.log(items);
+        setItems(items);
+    }
 
 
+    // ///////////////////////////////TEST FUNCTIONS
+    // console.log(context.store);
 
     return (
         <div className="productContainer">
 
-            <div>
-                <Typography.Text>View Items Sorted By: </Typography.Text>
-                <Select
-                    size="large"
-                    defaultValue={"az"}
-                    onChange={(value) => { setSortOrder(value) }}
-                    options={[
-                        {
-                            label: 'Sort by A-Z',
-                            value: 'az'
-                        },
-                        {
-                            label: 'Sort by Z-A',
-                            value: 'za'
-                        },
-                        {
-                            label: 'Price: Low - High',
-                            value: 'lowHight'
-                        },
-                        {
-                            label: 'Price: High - Low',
-                            value: 'highLow'
-                        }
-                    ]}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div>
+                    <Typography.Text>View Items Sorted By: </Typography.Text>
+                    <Select
+                        size="large"
+                        defaultValue={"az"}
+                        onChange={(value) => { setSortOrder(value) }}
+                        options={[
+                            {
+                                label: 'Sort by A-Z',
+                                value: 'az'
+                            },
+                            {
+                                label: 'Sort by Z-A',
+                                value: 'za'
+                            },
+                            {
+                                label: 'Price: Low - High',
+                                value: 'lowHight'
+                            },
+                            {
+                                label: 'Price: High - Low',
+                                value: 'highLow'
+                            }
+                        ]}>
 
-                </Select>
+                    </Select>
+                </div>
+                <div>
+                    {/* <Typography.Text>Search anything:  </Typography.Text> */}
+                    <Search placeholder="Search..."
+                        prefix
+                        size="large"
+                        allowClear
+                        onSearch={handleSearch}
+                        onPressEnter={handleSearch}
+                        onChange={(val) => setSearchKey(val.target.value)}
+                    />
+
+                </div>
             </div>
 
             <List
                 loading={loading}
+                pagination
                 grid={{ column: 3 }}
                 renderItem={(product, index) => {
 
                     return (
 
-                        <Badge.Ribbon
-                            className="itemCardBadge"
-                            text={`-${product.discountPercentage}%`}
-                            color="pink">
-                            <Card
-                                className="itemCard"
-                                title={product.title}
-                                key={index}
-                                cover={<Image className="itemCardImage" src={product.thumbnail} />}
-                                actions={[
-                                    <Rate
-                                        allowHalf
-                                        disabled
-                                        value={product.rating} />,
-                                    <AddToCartButton item={product} />
-                                ]}
+                        <div>
+                            <Badge.Ribbon
+                                className="itemCardBadge"
+                                text={`-${product.discountPercentage}%`}
+                                color="pink">
+                                <Card
+                                    className="itemCard"
+                                    title={product.title}
+                                    key={index}
+                                    cover={<Image className="itemCardImage" src={product.thumbnail} />}
+                                    actions={[
+                                        <Rate
+                                            allowHalf
+                                            // disabled
+                                            defaultValue={product.rating} />,
 
-                            >
-                                <Card.Meta
+                                        <AddToCartButton item={product} />
 
-                                    title={
+                                    ]}
 
-                                        <Typography.Paragraph>
-                                            ${product.price}{" "}
-                                            <Typography.Text delete type="danger">
-                                                $
-                                                {parseFloat(
-                                                    (product.price +
-                                                        (product.price * product.discountPercentage / 100))
-                                                        .toFixed(2))}
-                                            </Typography.Text>
-                                        </Typography.Paragraph>}
+                                >
+                                    <Card.Meta
 
-                                    description={<Typography.Paragraph ellipsis={{ rows: 2, expandable: true, symbol: "more" }}>{product.description}</Typography.Paragraph>}
+                                        title={
 
-                                ></Card.Meta>
-                            </Card>
-                        </Badge.Ribbon>
+                                            <Typography.Paragraph>
+                                                ${product.price}{" "}
+                                                <Typography.Text delete type="danger">
+                                                    $
+                                                    {parseFloat(
+                                                        (product.price +
+                                                            (product.price * product.discountPercentage / 100))
+                                                            .toFixed(2))}
+                                                </Typography.Text>
+                                            </Typography.Paragraph>}
+
+                                        description={<Typography.Paragraph ellipsis={{ rows: 2, expandable: true, symbol: "more" }}>{product.description}</Typography.Paragraph>}
+
+                                    ></Card.Meta>
+                                </Card>
+                            </Badge.Ribbon>
+                            {/* <Button type="primary"
+                                onClick={() => addToCart(product)}
+                            >Add To Cart</Button> */}
+                        </div>
+
+
+
+
                     )
                 }} dataSource={getSortedItems()}>
 
@@ -157,18 +256,46 @@ const Products = () => {
 
 function AddToCartButton({ item }) {
 
+    const context = useContext(StoreContext);
+
+
     const [loading, setLoading] = useState(false);
 
     const addProductToCart = () => {
         setLoading(true);
-        addToCart(item.id).then(res => {
-            message.success(`${item.title} has been added to cart`)
-        })
+
+        // console.log(item);
+
+        const items = [...context.store.cart];
+
+        const index = items.findIndex(element => element.id === item.id);
+        // console.log(`index: ${index}`);
+        if (index !== -1) {
+
+            message.warning(`${item.title} is already in your cart`);
+
+            const newItem = items[index];
+            newItem.quantity = newItem.quantity ? newItem.quantity + 1 : 1;
+
+        }
+
+        else {
+            items.push(item);
+            message.success(`${item.title} has been added to cart successfully`);
+
+        }
+
+        context.setStore({
+            cart: items,
+        });
+
+
+
 
         setLoading(false);
     }
 
-    return <Button type="link"
+    return <Button type="primary"
         onClick={() => { addProductToCart(); }}
         loading={loading}
     >Add To Cart</Button>;

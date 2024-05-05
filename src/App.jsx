@@ -4,17 +4,28 @@ import AppHeader from './Components/Header';
 import PageContent from './Components/PageContent';
 import AppFooter from './Components/Footer';
 import { BrowserRouter } from 'react-router-dom';
-
+import { useState } from 'react';
+import StoreContext from './Context/context';
 
 
 function App() {
+
+  const [store, setStore] = useState({ cart: [] });
+
   return (
+
+
     <div className='App'>
-      <BrowserRouter>
-        <AppHeader />
-        <PageContent />
-        <AppFooter />
-      </BrowserRouter>
+
+      <StoreContext.Provider value={{ store, setStore }}>
+        <BrowserRouter>
+          <AppHeader />
+          <PageContent />
+          <AppFooter />
+        </BrowserRouter>
+      </StoreContext.Provider>
+
+
 
 
 

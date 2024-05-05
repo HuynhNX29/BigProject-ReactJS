@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Badge, Button, Checkbox, Drawer, Form, Input, InputNumber, Menu, Table } from 'antd';
+import { Badge, Button, Checkbox, Drawer, Form, Input, Menu, Space, Table } from 'antd';
 import { message } from 'antd';
 import { HomeFilled, ShoppingCartOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Typography from "antd/es/typography/Typography";
 import { getCart } from "../../API";
+import { useContext } from 'react';
+import StoreContext from "../../Context/context";
+import { FcBusinessman } from "react-icons/fc";
+
+import { InputNumber } from 'antd';
 
 const AppHeader = () => {
 
@@ -16,9 +21,16 @@ const AppHeader = () => {
   }
 
 
+
+
+
+
+
+
   return <div className="appHeader">
 
     <Menu
+    theme="light"
       className="appMenu"
       onClick={onMenuClick}
       mode="horizontal"
@@ -93,35 +105,96 @@ function AppCart() {
 
   const [cartItems, setCartItems] = useState([]);
 
-  // const [messageApi, contextHolder] = message.useMessage();
+  const context = useContext(StoreContext);
+  const { cart } = context.store;
 
-  // const successFunc = () => {
-  //   messageApi.open({
-  //     type: 'success',
-  //     content: 'Your order has been created successfully',
-  //   });
-  // };
 
-  useEffect(() => {
-    getCart().then((res) => {
-      setCartItems(res.products);
-    })
+  // useEffect(() => {
+  //   getCart().then((res) => {
+  //     setCartItems(res.products);
+  //   })
 
-  }, []);
+  // }, []);
 
   const onConfirmOrder = (values) => {
     // console.log(values);
     setCartDrawerOpen(false);
     setCheckoutDrawerOpen(false);
-    // successFunc();
-    // <Alert message="Success Tips" type="success" showIcon />
+
+    context.setStore({
+      cart: [],
+    });
 
     message.success("Your order has been created successfully")
   }
 
+  const handleCheckOutYourCart = (values) => {
+    if (cart.length > 0) {
+      setCheckoutDrawerOpen(true)
+    }
+    else {
+      message.warning("Your cart is empty")
+    }
+
+
+  }
+
+  const handleDeleteItem = (item) => {
+    // console.log(item);
+    // console.log(cart);
+    const newCart = cart.filter(_item => _item !== item);
+    // console.log(newCart);
+    context.setStore({
+      cart: newCart,
+    });
+
+  }
+
+
+
+  const handleIncreaseQuantity = (item) => {
+    // console.log(item);
+
+    const newCart = [...cart];
+    // console.log(newCart);
+
+    const index = newCart.indexOf(item);
+    // console.log(index);
+
+    // newCart[index].quantity ? newCart[index].quantity + 1 : 1
+
+    // console.log(newCart[index]);
+
+
+    newCart[index].quantity += 1;
+
+    // console.log(newCart[index].quantity);
+    context.setStore({
+      cart: newCart
+    });
+
+    // console.log(newCart);
+  }
+
+
+  const handleDecreaseQuantity = (item) => {
+
+    const newCart = [...cart];
+    const index = newCart.indexOf(item);
+    if (newCart[index].quantity > 0) {
+      newCart[index].quantity -= 1;
+      context.setStore({
+        cart: newCart
+      });
+    }
+
+
+  }
+
+
   return (
     <div style={{ cursor: "pointer" }}>
-      <Badge count={7}
+      <Badge count={cart.length}
         className="shoppingCartIcon"
         onClick={() => { setCartDrawerOpen(true) }}
       >
@@ -131,8 +204,9 @@ function AppCart() {
 
       <Drawer open={cartDrawerOpen}
         onClose={() => { setCartDrawerOpen(false) }}
+        // afterOpenChange={handleCalculate()}
         title="Your Cart"
-        contentWrapperStyle={{ width: 500 }}
+        contentWrapperStyle={{ width: '100%' }}
       >
 
         <Table
@@ -144,54 +218,76 @@ function AppCart() {
             title: "Price",
             dataIndex: "price",
             render: (value) => {
+              // iPrice = value;
               return <span>${value}</span>
             }
           },
           {
             title: "Quantity",
-            dataIndex: "quantity",
+            dataIndex: 'quantity',
             render: (value, record) => {
-              return <InputNumber
-                min={0}
-                defaultValue={value}
-                onChange={(value) => {
-                  setCartItems(pre => pre.map(
-                    cart => {
-                      if (record.id === cart.id) {
-                        record.total = record.price * value
-                      }
-                      return cart;
-                    }
-                  ))
-                }}
-              ></InputNumber>
-            },
+              return <span>{value}</span>
+
+
+
+              // <InputNumber
+              //   min={0}
+              //   defaultValue={1}
+              //   onChange={(val) => {
+
+              //     // record.quantity = val
+              //     context.setStore({
+              //       ...cart, quantity: val
+              //     });
+
+              //   }}
+
+              // ></InputNumber>
+            }
           },
           {
             title: "Total",
-            dataIndex: "total",
-            render: (value) => {
-              return <span>${value}</span>
+            dataIndex: 'total',
+            render: (_, record) => {
+              return <span>${record.price * record.quantity}</span>
             }
-          }
+          },
+          {
+            title: 'Action',
+            key: 'action',
+            render: (_, record) => (
+              <Space size="middle">
+                <Button
+                  onClick={() => handleIncreaseQuantity(record)}
+                >+</Button>
+
+                <Button
+                  onClick={() => handleDecreaseQuantity(record)}
+                >-</Button>
+
+                <Button
+                  onClick={() => handleDeleteItem(record)}
+                >Delete</Button>
+
+
+
+              </Space>
+            ),
+          },
 
           ]}
 
-          dataSource={cartItems}
+          dataSource={cart}
           pagination={false}
-          summary={(data) => {
-            const total = data.reduce((pre, current) => {
-              return pre + current.total
 
-            }, 0)
-
-
-            return <span>Total: ${total}</span>
-          }}
         />
 
+        <h4>
+          Total: ${cart.reduce((a, b) => a + b.price * b.quantity, 0)}
+        </h4>
+
         <Button
-          onClick={() => { setCheckoutDrawerOpen(true) }}
+          onClick={() => handleCheckOutYourCart()}
           type="primary">Check Out Your Cart</Button>
 
       </Drawer>
@@ -239,6 +335,22 @@ function AppCart() {
             name="your_address">
 
             <Input placeholder="Enter your address." />
+          </Form.Item>
+
+          <Form.Item
+            rules={[{
+              required: true,
+              message: "Please enter your phone number"
+            }]}
+            label="Phone Number"
+            name="your_phonenumber">
+
+            <Input maxLength={15}
+              type="tel"
+              placeholder="Enter your phone number."
+              pattern="[0-9]{2}-[0-9]{9}"
+              required
+            />
           </Form.Item>
 
 
